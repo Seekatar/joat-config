@@ -13,14 +13,23 @@ $True if found and removed, $False if not found or file doesn't exist
 #>
 function Remove-ConfigData
 {
-[CmdletBinding(SupportsShouldProcess)]
+[CmdletBinding(SupportsShouldProcess,ConfirmImpact="High")]
 [OutputType([Bool])]
 param(
-[Parameter(Mandatory)]
-[string] $Name,
 [string] $Path
 )
+
+dynamicParam {
+	makeDynamicParam -ParameterName "Name" -MakeList {
+
+		Find-ConfigData
+	} -Mandatory -ValueFromPipeline
+}
+
+process
+{
     Set-StrictMode -Version Latest
+	$Name = $psboundparameters["Name"]
 
 	$Path = Get-ConfigDataPath $Path
 
@@ -42,6 +51,7 @@ param(
 	}
 
     $false
+}
 }
 
 New-Alias -Name rcd -Value Remove-ConfigData

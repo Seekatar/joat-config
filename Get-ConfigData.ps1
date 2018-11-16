@@ -3,7 +3,7 @@
 Get data from a JSON config file
 
 .PARAMETER Name
-Name of the config data to get.  Wildcards are supports, see WithName
+Name of the config data to get.  Supports tab completion
 
 .PARAMETER AsSecureString
 Return the encrypted data as a SecureString
@@ -17,9 +17,6 @@ Don't kick out a Warning message if not found
 .PARAMETER Path
 Path to the config file
 
-.PARAMETER WithName
-If set, will emit object with name/value instead of just value, useful when using wildcards
-
 .EXAMPLE
 Get-ConfigData Key
 
@@ -31,15 +28,23 @@ function Get-ConfigData
 [CmdletBinding()]
 [OutputType([string],[PSCustomObject])]
 param(
-[Parameter()]
-[string] $Name,
 [switch] $AsSecureString,
 [switch] $Decrypt,
 [switch] $NoWarnIfNotFound,
-[string] $Path,
-[switch] $WithName
+[string] $Path
 )
+
+dynamicParam {
+	makeDynamicParam -ParameterName "Name" -MakeList {
+
+		Find-ConfigData
+	}  -Mandatory -ValueFromPipeline -Position 1 # -DebugFile C:\temp\test.txt
+}
+
+process
+{
 	Set-StrictMode -Version Latest
+	$Name = $psboundparameters["Name"]
 
 	$Path = Get-ConfigDataPath $Path
 
@@ -47,10 +52,16 @@ param(
 	{
 		throw "Path $Path not found"
 	}
+	Write-Verbose "Getting $Name from $Path"
 
 	$object = Get-Content $path -Raw | ConvertFrom-Json
-	$members = Get-Member -InputObject $object | Where-Object Name -like $Name | Select-Object -ExpandProperty name
-	foreach( $member in $members )
+
+	$member = Get-Member -InputObject $object -MemberType NoteProperty  | Where-Object Name -eq $Name | Select-Object -ExpandProperty name
+	if ( !$member -and !$NoWarnIfNotFound )
+	{
+		Write-Warning "Didn't find value named $name in $path"
+	}
+	else
 	{
 		$value = $object.$member
 		if ( $PSVersionTable.PSVersion.Major -gt 5 -and -not $IsWindows )
@@ -102,19 +113,10 @@ param(
 				$value = $secureString
 			}
 		}
-		if ( $WithName )
-		{
-			[PSCustomObject] @{Name=$member;Value=$value}
-		}
-		else
-		{
-			$value
-		}
+		$value
 	}
-	if ( !$members -and !$NoWarnIfNotFound )
-	{
-		Write-Warning "Didn't find value named $name in $path"
-	}
+}
+
 }
 
 New-Alias -Name gcd -Value Get-ConfigData

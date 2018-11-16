@@ -26,6 +26,8 @@ function Find-ConfigData
 [CmdletBinding()]
 param(
 [string] $NameLike = '*',
+[switch] $WithValues,
+[switch] $Decrypt,
 [string] $Path
 )
     Set-StrictMode -Version Latest
@@ -38,7 +40,18 @@ param(
 	}
 
     $object = Get-Content $path -Raw | ConvertFrom-Json
-    Get-Member -InputObject $object -MemberType NoteProperty | Where-Object Name -like $NameLike | Select-Object -ExpandProperty Name
+	$members = Get-Member -InputObject $object -MemberType NoteProperty | Where-Object Name -like $NameLike | Select-Object -ExpandProperty Name
+	if ( $WithValues )
+	{
+		foreach ( $member in $members )
+		{
+			[PSCustomObject]@{Name=$member;Value=(Get-ConfigData -Name $member -Decrypt:$Decrypt)}
+		}
+	}
+	else
+	{
+		$members
+	}
 }
 
 New-Alias -Name fcd -Value Find-ConfigData

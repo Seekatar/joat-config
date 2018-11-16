@@ -8,6 +8,10 @@ param(
 [Parameter(Mandatory)]
 [scriptblock] $MakeList,
 [string] $Alias,
+[string] $ParameterSetName,
+[switch] $Mandatory,
+[switch] $ValueFromPipeline,
+[int] $Position = 0,
 [string] $Help,
 [string] $DebugFile
 )
@@ -27,12 +31,18 @@ param(
 
     # create a new atrbute for all parameter sets
     $attributes = new-object System.Management.Automation.ParameterAttribute
-    $attributes.ParameterSetName = "__AllParameterSets"
+    if ( $ParameterSetName )
+    {
+        $attributes.ParameterSetName = $ParameterSetName
+    }
     if ( $Help )
     {
         $attributes.HelpMessage = $Help
     }
-
+    $attributes.Mandatory = [bool]$Mandatory
+    $attributes.ValueFromPipeline = [bool]$ValueFromPipeline
+    $attributes.Position = $Position
+    logit "Attributes are $(ConvertTo-Json $attributes)"
     try
     {
         logit "About to invoke"
