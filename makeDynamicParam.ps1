@@ -48,16 +48,19 @@ param(
         logit "About to invoke"
         $names = $MakeList.Invoke()
         logit "list is now $($names | out-string)"
+        if ( $names )
+        {
+            $paramOptions = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $names
+            $attributeCollection.Add($paramOptions)
+        }
     }
     catch {
         logit "Exception is $_"
     }
 
-    $paramOptions = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $names
 
     # hook things together
     $attributeCollection.Add($attributes)
-    $attributeCollection.Add($paramOptions)
 
     $paramDictionary.Add($ParameterName, $dynParam)
 

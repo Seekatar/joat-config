@@ -13,16 +13,16 @@ $True if found and removed, $False if not found or file doesn't exist
 #>
 function Remove-ConfigData
 {
-[CmdletBinding(SupportsShouldProcess,ConfirmImpact="High")]
+[CmdletBinding(SupportsShouldProcess,ConfirmImpact="High",PositionalBinding=$false)] # PositionalBinding=$false allows us to use dynamic Name w/o -Name
 [OutputType([Bool])]
 param(
+[switch] $NoNameValidate,
 [string] $Path
 )
 
 dynamicParam {
 	makeDynamicParam -ParameterName "Name" -MakeList {
-
-		Find-ConfigData
+		Find-ConfigData -Path $Path
 	} -Mandatory -ValueFromPipeline
 }
 

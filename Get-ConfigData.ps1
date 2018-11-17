@@ -25,19 +25,19 @@ Object from config file, or $null
 #>
 function Get-ConfigData
 {
-[CmdletBinding()]
+[CmdletBinding(PositionalBinding=$false)] # PositionalBinding=$false allows us to use dynamic Name w/o -Name
 [OutputType([string],[PSCustomObject])]
 param(
 [switch] $AsSecureString,
 [switch] $Decrypt,
 [switch] $NoWarnIfNotFound,
+[switch] $NoNameValidate,
 [string] $Path
 )
 
 dynamicParam {
 	makeDynamicParam -ParameterName "Name" -MakeList {
-
-		Find-ConfigData
+		Find-ConfigData -Path $Path
 	}  -Mandatory -ValueFromPipeline -Position 1 # -DebugFile C:\temp\test.txt
 }
 

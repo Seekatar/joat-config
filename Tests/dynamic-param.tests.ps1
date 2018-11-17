@@ -94,7 +94,7 @@ function noNameDynamicParam {
         $dyn
     }
 
-    }
+}
 
 if ( $test )
 {

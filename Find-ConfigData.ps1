@@ -40,12 +40,12 @@ param(
 	}
 
     $object = Get-Content $path -Raw | ConvertFrom-Json
-	$members = Get-Member -InputObject $object -MemberType NoteProperty | Where-Object Name -like $NameLike | Select-Object -ExpandProperty Name
+	$members = Get-Member -InputObject $object -MemberType NoteProperty | Where-Object Name -like $NameLike | Select-Object -ExpandProperty Name | Sort-Object
 	if ( $WithValues )
 	{
 		foreach ( $member in $members )
 		{
-			[PSCustomObject]@{Name=$member;Value=(Get-ConfigData -Name $member -Decrypt:$Decrypt)}
+			[PSCustomObject]@{Name=$member;Value=(Get-ConfigData -Name $member -Decrypt:$Decrypt -Path $Path)}
 		}
 	}
 	else
