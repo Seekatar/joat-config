@@ -1,8 +1,9 @@
+param( [switch] $test )
 
 .  (Join-path $PSScriptRoot ..\makeDynamicParam.ps1)
 
 
-function dynamicParamSimple {
+function simpleDynamicParam {
 [CmdletBinding()]
 param()
 
@@ -25,7 +26,7 @@ process
 
 }
 
-function dynamicParamConditional {
+function conditionalDynamicParam {
 [CmdletBinding()]
 param(
 [switch] $Colors
@@ -42,7 +43,7 @@ DynamicParam
 		{
 			'cow','pig','horse'
 		}
-    } -DebugFile C:\temp\test.txt
+    }
 }
 
 process
@@ -57,29 +58,87 @@ process
 
 }
 
+<#
+Try to get it so can not pass in -dyn and just use "red"
+Help says -dyn is optional, but can't get it to take it w/o
+e.g.
+noNameDynamicParam red # sets staticParam to red, prompts for dyn
+noNameDynamicParam -dyn red # ok
+
+Setting explicit postion and CmdletBinding(PositionalBinding) doesn't help
+DefaultParameterSetName="dyn" didn't help
+PositionalBinding=$false and removing position worked, but have to supply -static for second
+#>
+
+function noNameDynamicParam {
+    [CmdletBinding(PositionalBinding=$false)]
+    param(
+    [Parameter()]
+    [string] $staticParam
+    )
+
+    DynamicParam
+    {
+        makeDynamicParam "dyn" -MakeList {
+                'red','light blue','green'
+        } -Mandatory
+    }
+
+    process
+    {
+        Set-StrictMode -Version Latest
+        $dyn = $psboundparameters["dyn"]
+
+        Write-Verbose "params are $($psboundparameters | out-string)"
+
+        $dyn
+    }
+
+    }
+
+if ( $test )
+{
 Describe "TestDynamicParameters" {
-    It "TestsPositive" {
-        dynamicParamSimple -dyn cow | Should be 'cow'
+    It "Tests Positive" {
+        simpleDynamicParam -dyn cow | Should be 'cow'
     }
     It "TestsNegative" {
-        {dynamicParamSimple -dyn red} | Should throw
+        {simpleDynamicParam -dyn red} | Should throw
     }
  }
 
  Describe "TestDynamicConditionalParameters" {
-    It "TestsPositive" {
-        dynamicParamConditional -dyn cow | Should be 'cow'
+    It "Tests Positive" {
+        conditionalDynamicParam -dyn cow | Should be 'cow'
     }
-    It "TestsPositiveColor" {
-        dynamicParamConditional -color -dyn red | Should be 'red'
+    It "Tests Positive Color" {
+        conditionalDynamicParam -dyn red -Colors | Should be 'red'
     }
-    It "TestsTheNegative" {
-        {dynamicParamConditional -dyn red} | Should throw
+    It "Tests Negative" {
+        {conditionalDynamicParam -dyn red} | Should throw
     }
-    It "TestsTheNegativeColor" {
-        {dynamicParamConditional -color -dyn cow} | Should throw
+    It "Tests Negative Color" {
+        {conditionalDynamicParam -color -dyn cow} | Should throw
     }
-    It "TestsSpace" {
-        dynamicParamConditional -color -dyn "light blue" | Should be "light blue"
+    It "Tests Space" {
+        conditionalDynamicParam -color -dyn "light blue" | Should be "light blue"
     }
+}
+
+Describe "test noNameDynamicParam" {
+    It "Tests Positive" {
+        noNameDynamicParam 'light blue' | Should be 'light blue'
+    }
+    It "Tests Positive Static" {
+        noNameDynamicParam red -static "ok" | Should be 'red'
+    }
+    It "Tests Negative Bad Param" {
+        {noNameDynamicParam red2 } | Should throw
+    }
+    # prompts
+    # It "Tests Negative Missing Param" {
+    #     {noNameDynamicParam } | Should throw
+    # }
+}
+
 }
