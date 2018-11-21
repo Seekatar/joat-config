@@ -3,38 +3,80 @@ param( [switch] $test )
 .  (Join-path $PSScriptRoot ..\makeDynamicParam.ps1)
 
 
-function simpleDynamicParam {
-[CmdletBinding()]
-param()
+function processIt {
+param( $bindings )
 
-DynamicParam
-{
-    makeDynamicParam "dyn" -MakeList {
-        return 'cow','pig','horse'
-    }
-}
-
-process
-{
     Set-StrictMode -Version Latest
-    $dyn = $psboundparameters["dyn"]
+    $dyn = $bindings["dyn"]
 
-    Write-Verbose "params are $($psboundparameters | out-string)"
+    Write-Verbose "params are $($bindings | out-string)"
 
     $dyn
 }
 
+function simpleDynamicParam {
+[CmdletBinding()]
+param()
+
+DynamicParam {
+    makeDynamicParam "dyn" -ValidateSetScript {
+        return 'cow','pig','horse'
+    } -DebugFile C:\temp\test.txt
+
 }
 
-function conditionalDynamicParam {
+process {
+    processIt $PSBoundParameters
+}
+
+}
+
+function twoSimpleDynamicParam {
 [CmdletBinding()]
+param()
+
+DynamicParam {
+    makeDynamicParam "dynAnimal" -ValidateSet 'cow','pig','horse' -Mandatory |
+    makeDynamicParam "dynColor" -ValidateSet 'red','light blue','green' -Mandatory
+}
+
+process {
+    $PSBoundParameters["dynAnimal"]
+    $PSBoundParameters["dynColor"]
+}
+
+}
+
+<#
+.SYNOPSIS
+Test dynamic parameter function that does not work, since no [CmdletBinding] or [Parameter]
+#>
+function simpleDynamicParamNoBinding {
+    param()
+
+    DynamicParam
+    {
+        makeDynamicParam "dyn" -ValidateSet 'cow','pig','horse'
+    }
+
+    process
+    {
+        processIt $PSBoundParameters
+    }
+
+}
+
+
+function conditionalDynamicParam {
+[Cmdletbinding()]
 param(
+[Parameter()]
 [switch] $Colors
 )
 
 DynamicParam
 {
-    makeDynamicParam "dyn" -MakeList {
+    makeDynamicParam "dyn" -ValidateSetScript {
 		if ( (Test-Path variable:colors) -and $colors )
 		{
 			'red','light blue','green'
@@ -48,12 +90,7 @@ DynamicParam
 
 process
 {
-    Set-StrictMode -Version Latest
-    $dyn = $psboundparameters["dyn"]
-
-    Write-Verbose "params are $($psboundparameters | out-string)"
-
-    $dyn
+    processIt $PSBoundParameters
 }
 
 }
@@ -79,31 +116,28 @@ function noNameDynamicParam {
 
     DynamicParam
     {
-        makeDynamicParam "dyn" -MakeList {
-                'red','light blue','green'
-        } -Mandatory
+        makeDynamicParam -ParameterName "dyn" -ValidateSet 'red','light blue','green' -Mandatory
     }
 
     process
     {
-        Set-StrictMode -Version Latest
-        $dyn = $psboundparameters["dyn"]
-
-        Write-Verbose "params are $($psboundparameters | out-string)"
-
-        $dyn
+        processIt $PSBoundParameters
     }
 
 }
 
 if ( $test )
 {
+
 Describe "TestDynamicParameters" {
     It "Tests Positive" {
         simpleDynamicParam -dyn cow | Should be 'cow'
     }
     It "TestsNegative" {
         {simpleDynamicParam -dyn red} | Should throw
+    }
+    It "TestsNoParam" {
+        {simpleDynamicParam} | Should not throw
     }
  }
 
@@ -135,10 +169,25 @@ Describe "test noNameDynamicParam" {
     It "Tests Negative Bad Param" {
         {noNameDynamicParam red2 } | Should throw
     }
-    # prompts
+    # this will prompt for dyn
     # It "Tests Negative Missing Param" {
     #     {noNameDynamicParam } | Should throw
     # }
 }
 
+Describe "test no bindings" {
+    It "Tests no Cmdletbinding" {
+        simpleDynamicParamNoBinding -dyn pig | should be $null
+    }
 }
+
+# Describe "test two parameters" {
+#     It "Checks two positive" {
+#         ($animal,$color) = twoSimpleDynamicParam -dynAnimal cow -dynColor red
+#         $animal | Should be "cow"
+#         $color | Should be "red"
+#     }
+# } -Tag SkipMe
+
+} #end if test
+

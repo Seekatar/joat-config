@@ -21,8 +21,15 @@ param(
 )
 
 dynamicParam {
-	makeDynamicParam -ParameterName "Name" -MakeList {
-		Find-ConfigData -Path $Path
+	makeDynamicParam -ParameterName "Name" -ValidateSetScript {
+		if ( !((Test-Path variable:NoNameValidate) -and $SkipNameValidate))
+		{
+			if (!((Test-Path variable:Path) -and $Path))
+			{
+				$Path = $null # can't pass in undefined path
+			}
+			Find-ConfigData -Path $Path
+		}
 	} -Mandatory -ValueFromPipeline
 }
 

@@ -1,16 +1,92 @@
+<#
+.SYNOPSIS
+Helper for making dynamic parameters with ValidateSets in PowerShell
 
+.PARAMETER ParameterName
+Name of dynamic parameter
+
+.PARAMETER MakeList
+A scriptblock to create the ValidateSet list
+
+.PARAMETER Alias
+Alias for parameter
+
+.PARAMETER ParameterSetName
+Parameter set name
+
+.PARAMETER Mandatory
+If the parameter is mandatory
+
+.PARAMETER ValueFromPipeline
+If the parameter is from the pipeline
+
+.PARAMETER Position
+Position to set
+
+.PARAMETER Help
+Optional help
+
+.PARAMETER DebugFile
+File for outputing debug information, for debugging dyn parameters
+
+.EXAMPLE
+function simpleDynamicParam {
+[CmdletBinding()]
+param()
+
+DynamicParam
+{
+    makeDynamicParam "dyn" -MakeList {
+        return 'cow','pig','horse'
+    }
+}
+
+process
+{
+    Set-StrictMode -Version Latest
+    $dyn = $psboundparameters["dyn"]
+
+    Write-Verbose "params are $($psboundparameters | out-string)"
+
+    $dyn
+}
+
+}
+
+.EXAMPLE
+function conditionalDynamicParam {
+[CmdletBinding()]
+param(
+[switch] $Colors
+)
+
+DynamicParam
+{
+    makeDynamicParam "dyn" -MakeList {
+		if ( (Test-Path variable:colors) -and $colors )
+		{
+			'red','light blue','green'
+		}
+
+    }
+}
+#>
 function makeDynamicParam
 {
 [CmdletBinding()]
 param(
-[Parameter(Mandatory)]
+[Parameter(Mandatory,ParameterSetName="ValidateScriptBlock",Position=1)]
+[Parameter(Mandatory,ParameterSetName="ValidateSet",Position=1)]
 [string] $ParameterName,
-[Parameter(Mandatory)]
-[scriptblock] $MakeList,
+[Parameter(Mandatory,ParameterSetName="ValidateScriptBlock")]
+[scriptblock] $ValidateSetScript,
+[Parameter(Mandatory,ParameterSetName="ValidateSet")]
+[string[]] $ValidateSet,
 [string] $Alias,
 [string] $ParameterSetName,
 [switch] $Mandatory,
 [switch] $ValueFromPipeline,
+[switch] $ValueFromPipelineByPropertyName,
 [int] $Position = 0,
 [string] $Help,
 [string] $DebugFile
@@ -41,21 +117,26 @@ param(
     }
     $attributes.Mandatory = [bool]$Mandatory
     $attributes.ValueFromPipeline = [bool]$ValueFromPipeline
+    $attributes.ValueFromPipelineByPropertyName = [bool]$ValueFromPipelineByPropertyName
     $attributes.Position = $Position
-    logit "Attributes are $(ConvertTo-Json $attributes)"
-    try
+    logit "Attributes are $(ConvertTo-Json ($attributes | Select-Object * -ExcludeProperty "TypeId")  -Depth 1)"
+
+    if ( $ValidateSetScript )
     {
-        logit "About to invoke"
-        $names = $MakeList.Invoke()
-        logit "list is now $($names | out-string)"
-        if ( $names )
+        try
         {
-            $paramOptions = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $names
-            $attributeCollection.Add($paramOptions)
+            logit "About to invoke"
+            $ValidateSet = $ValidateSetScript.Invoke()
+        }
+        catch {
+            logit "Exception from ValidateSetScript: $_"
         }
     }
-    catch {
-        logit "Exception is $_"
+    logit "list is now $($ValidateSet | out-string)"
+    if ( $ValidateSet )
+    {
+        $paramOptions = New-Object System.Management.Automation.ValidateSetAttribute -ArgumentList $ValidateSet
+        $attributeCollection.Add($paramOptions)
     }
 
 

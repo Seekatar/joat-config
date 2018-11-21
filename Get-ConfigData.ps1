@@ -11,7 +11,7 @@ Return the encrypted data as a SecureString
 .PARAMETER Decrypt
 Return encrypted data in clear text
 
-.PARAMETER NoWarnIfNotFound
+.PARAMETER Quiet
 Don't kick out a Warning message if not found
 
 .PARAMETER Path
@@ -30,19 +30,27 @@ function Get-ConfigData
 param(
 [switch] $AsSecureString,
 [switch] $Decrypt,
-[switch] $NoWarnIfNotFound,
-[switch] $NoNameValidate,
+[switch] $Quiet,
+[switch] $SkipNameValidate,
 [string] $Path
 )
 
 dynamicParam {
-	makeDynamicParam -ParameterName "Name" -MakeList {
-		Find-ConfigData -Path $Path
-	}  -Mandatory -ValueFromPipeline -Position 1 # -DebugFile C:\temp\test.txt
+	makeDynamicParam -ParameterName "Name" -ValidateSetScript {
+		if ( !((Test-Path variable:NoNameValidate) -and $SkipNameValidate))
+		{
+			if (!((Test-Path variable:Path) -and $Path))
+			{
+				$Path = $null # can't pass in undefined path
+			}
+			Find-ConfigData -Path $Path
+		}
+	}  -Mandatory -ValueFromPipeline
 }
 
 process
 {
+	Write-Verbose "Path is $Path"
 	Set-StrictMode -Version Latest
 	$Name = $psboundparameters["Name"]
 
@@ -56,10 +64,14 @@ process
 
 	$object = Get-Content $path -Raw | ConvertFrom-Json
 
+	$value = $null
 	$member = Get-Member -InputObject $object -MemberType NoteProperty  | Where-Object Name -eq $Name | Select-Object -ExpandProperty name
-	if ( !$member -and !$NoWarnIfNotFound )
+	if ( !$member  )
 	{
-		Write-Warning "Didn't find value named $name in $path"
+		if ( !$Quiet )
+		{
+			Write-Warning "Didn't find value named $name in $path"
+		}
 	}
 	else
 	{
