@@ -47,6 +47,26 @@ process {
 
 }
 
+function twoSimpleDynamicParamPositional {
+    [CmdletBinding()]
+    param(
+    # this breaks it since it thinks test is always 1
+    #[Parameter(Position=3)]
+    #[string] $test
+    )
+
+    DynamicParam {
+        makeDynamicParam "dynAnimal" -ValidateSet 'cow','pig','horse' -Mandatory -Position 1|
+        makeDynamicParam "dynColor" -ValidateSet 'red','light blue','green' -Position 2 -Mandatory
+    }
+
+    process {
+        $PSBoundParameters["dynAnimal"]
+        $PSBoundParameters["dynColor"]
+    }
+
+    }
+
 <#
 .SYNOPSIS
 Test dynamic parameter function that does not work, since no [CmdletBinding] or [Parameter]
@@ -181,13 +201,13 @@ Describe "test no bindings" {
     }
 }
 
-# Describe "test two parameters" {
-#     It "Checks two positive" {
-#         ($animal,$color) = twoSimpleDynamicParam -dynAnimal cow -dynColor red
-#         $animal | Should be "cow"
-#         $color | Should be "red"
-#     }
-# } -Tag SkipMe
+Describe "test two parameters" {
+    It "Checks two positive" {
+        ($animal,$color) = twoSimpleDynamicParam -dynAnimal cow -dynColor red
+        $animal | Should be "cow"
+        $color | Should be "red"
+    }
+} -Tag SkipMe
 
 } #end if test
 

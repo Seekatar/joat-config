@@ -89,7 +89,9 @@ param(
 [switch] $ValueFromPipelineByPropertyName,
 [int] $Position = 0,
 [string] $Help,
-[string] $DebugFile
+[string] $DebugFile,
+[Parameter(ValueFromPipeline)]
+[System.Management.Automation.RuntimeDefinedParameterDictionary] $ParamDictionary
 )
     Set-StrictMode -Version Latest
     function logit($msg) {
@@ -98,8 +100,11 @@ param(
 
     logit "makeDynamicParam for $ParameterName"
 
-    # create a dictionary to return
-    $paramDictionary = new-object -Type System.Management.Automation.RuntimeDefinedParameterDictionary
+    # create a dictionary to return,
+    if ( !$ParamDictionary )
+    {
+        $ParamDictionary = new-object -Type System.Management.Automation.RuntimeDefinedParameterDictionary
+    }
 
     # create a new [string] dyn parameter with a collection of attributes
     $attributeCollection = new-object -Type System.Collections.ObjectModel.Collection[System.Attribute]
@@ -142,8 +147,7 @@ param(
 
     # hook things together
     $attributeCollection.Add($attributes)
+    $ParamDictionary.Add($ParameterName, $dynParam)
 
-    $paramDictionary.Add($ParameterName, $dynParam)
-
-    return $paramDictionary
+    return $ParamDictionary
 }
