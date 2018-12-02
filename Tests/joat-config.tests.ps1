@@ -153,19 +153,18 @@ Describe "Pipeline Tests" {
         Set-ConfigData -Path $path -Name "String1" -Value "abc"
         Set-ConfigData -Path $path -Name "String2" -Value "abc2"
         Set-ConfigData -Path $path -Name "Number" -Value 1
-        $prevCount = $Error.Count
         try
         {
             "String0" | Get-ConfigData -Path $Path -ErrorAction SilentlyContinue
             $false | Should be $true
         }
-        catch  {}
+        catch  { $true | Should be $true }
         try
         {
             "test" | Get-ConfigData -SkipNameValidate -Quiet -Path $Path -ErrorAction SilentlyContinue
             $false | Should be $true
         }
-        catch  {}
+        catch  { $true | Should be $true }
 	}
 
     Remove-Item $path
