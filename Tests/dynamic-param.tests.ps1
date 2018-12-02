@@ -1,6 +1,6 @@
 param( [switch] $test )
 
-.  (Join-path $PSScriptRoot dynamicParamFunctions.ps1)
+.  (Join-path $PSScriptRoot dynamicParamFunctions.tests.ps1)
 
 Describe "TestDynamicParameters" {
     It "Tests Positive" {
